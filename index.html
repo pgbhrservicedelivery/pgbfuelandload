@@ -442,23 +442,28 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--ink2);vertical-align:middl
   </div>
   <div class="tbl-card">
     <div class="tbl-top"><div class="tbl-ttl" id="mgr-ttl">All records</div></div>
-    <div class="tbl-scroll"><table><thead><tr><th>ID No.</th><th>Name</th><th>Affiliate</th><th>Dept</th><th>Designation</th><th>Benefit Type</th><th style="text-align:right">Amount</th><th>Remarks</th><th style="text-align:center">Actions</th></tr></thead><tbody id="tb-mgr"></tbody></table></div>
+    <div class="tbl-scroll"><table><thead><tr><th>ID No.</th><th>Name</th><th>Affiliate</th><th>Dept</th><th>Designation</th><th style="text-align:right;color:var(--fuel)">Fleet Card</th><th style="text-align:right;color:var(--fuel)">Fuel Alloc.</th><th style="text-align:right;color:var(--load)">Load Alloc.</th><th style="text-align:right;color:var(--load)">Smart</th><th style="text-align:right;color:var(--load)">Globe</th><th style="text-align:right;color:var(--gold)">Total</th><th style="text-align:center">Actions</th></tr></thead><tbody id="tb-mgr"></tbody></table></div>
     <div class="pagi"><span class="pagi-info" id="pgi-mgr">--</span><div class="pagi-btns" id="pgb-mgr"></div></div>
   </div>
   <div style="margin-top:2rem;border-top:1.5px solid var(--border);padding-top:1.5rem">
     <div class="log-bar"><div class="log-ttl">Change Log <span class="log-ct" id="log-ct">0 changes</span></div><div style="display:flex;gap:6px"><button class="btn btn-out btn-sm" onclick="expLog()">&#8595; Export log</button><button class="btn btn-out btn-sm" style="color:var(--accent);border-color:var(--accent)" onclick="clearLog()">&#x2715; Clear log</button></div></div>
     <div id="log-list" style="font-size:12px;color:var(--ink3)">No changes yet.</div>
+    <div id="log-pagi" style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;min-height:28px"></div>
   </div>
 </div></div>
 <div class="modal-bg" id="mod-edit">
 <div class="modal">
   <h3 id="mod-ttl">Add New Allocation</h3><p id="mod-desc">Fill in the details below.</p>
   <div class="form-grid">
-    <div class="fg"><label>Employee ID No.</label><input id="m-empid" type="text" placeholder="e.g. 2024-001"></div>
-    <div class="fg"><label>Full Name <span class="req">*</span></label><input id="m-name" type="text" placeholder="JUAN DELA CRUZ"></div>
-    <div class="fg"><label>Affiliate <span class="req">*</span></label><input id="m-co" type="text" placeholder="PSC" list="m-co-list"><datalist id="m-co-list"></datalist></div>
-    <div class="fg"><label>Department</label><input id="m-dept" type="text" placeholder="HRD"></div>
-    <div class="fg"><label>Designation</label><input id="m-desig" type="text" placeholder="HR Manager"></div>
+    <div class="fg" style="grid-column:1/-1">
+      <label>Employee ID No. <span class="req">*</span></label>
+      <input id="m-empid" type="text" placeholder="Type ID No. to auto-fill details..." oninput="lookupEmpId()" style="font-family:'JetBrains Mono',monospace;font-size:13px">
+      <div id="m-lookup-status" style="font-size:11px;margin-top:5px;min-height:16px"></div>
+    </div>
+    <div class="fg"><label>Full Name</label><input id="m-name" type="text" readonly placeholder="Auto-filled from PGB masterlist" style="background:var(--surface2);color:var(--ink2);cursor:default"></div>
+    <div class="fg"><label>Affiliate</label><input id="m-co" type="text" readonly placeholder="Auto-filled" style="background:var(--surface2);color:var(--ink2);cursor:default"><datalist id="m-co-list"></datalist></div>
+    <div class="fg"><label>Department</label><input id="m-dept" type="text" readonly placeholder="Auto-filled" style="background:var(--surface2);color:var(--ink2);cursor:default"></div>
+    <div class="fg"><label>Designation</label><input id="m-desig" type="text" readonly placeholder="Auto-filled" style="background:var(--surface2);color:var(--ink2);cursor:default"></div>
     <div class="fg"><label>Benefit Type <span class="req">*</span></label><select id="m-type" onchange="updSub()"><option value="Fuel">Fuel</option><option value="Load">Load</option></select></div>
     <div class="fg"><label id="m-sub-lbl">Fuel Sub-type <span class="req">*</span></label><select id="m-sub"><option value="Fleet card">Fleet Card</option><option value="Fuel allocation">Fuel Allocation</option></select></div>
     <div class="fg"><label>Amount (PHP) <span class="req">*</span></label><input id="m-amt" type="number" min="1" placeholder="5000"></div>
@@ -482,7 +487,7 @@ var mtF='both',maF='',msF='',mpg=0;
 var sortC='name',sortD=1;
 var editIdx=null,sepIdx=null;
 var logs=(function(){try{var s=localStorage.getItem('fla_changelog');return s?JSON.parse(s):[];}catch(e){return [];}})();
-var PG=20;
+var PG=20;var LPG=10;var lpg=0;
 var CL=['#1a3f7a','#155c2a','#c84a0a','#534AB7','#0F6E56','#7A5200','#711913','#3B6D11','#085041','#993C1D','#3C3489','#b08d3a','#2855a0','#2a8c47','#c84a0a'];
 
 function P(n){return '\u20b1'+Math.round(n).toLocaleString('en-PH');}
@@ -1588,28 +1593,76 @@ function renderEmployees(){
 function renderMgr(){
   var cos=[];for(var i=0;i<D.length;i++){if(cos.indexOf(D[i].company)<0)cos.push(D[i].company);}cos.sort();
   var sel=document.getElementById('mgr-aff');var cur=sel.value;sel.innerHTML='<option value="">All affiliates</option>';for(var i=0;i<cos.length;i++)sel.innerHTML+='<option value="'+cos[i]+'"'+(cos[i]===cur?' selected':'')+'>'+cos[i]+'</option>';
-  var recs=filtM().slice().sort(function(a,b){return a.company.localeCompare(b.company)||a.name.localeCompare(b.name);});
-  var tot=recs.length,pgs=Math.max(1,Math.ceil(tot/PG));if(mpg>=pgs)mpg=pgs-1;
-  document.getElementById('mgr-ttl').textContent=(maF||'All affiliates')+' — '+tot.toLocaleString()+' records';
+  var am=getAM(D);
+  var filtered=filtM();
+  // Group by emp_id (preferred) or company+name — same logic as Employees tab
+  var empMap={};var empOrder=[];
+  for(var i=0;i<filtered.length;i++){
+    var r=filtered[i];
+    var key=r.emp_id?r.emp_id.toUpperCase():r.company+'|||'+r.name;
+    if(!empMap[key]){
+      empMap[key]={emp_id:r.emp_id||'',name:r.name,company:r.company,dept:r.dept||'',designation:r.designation||'',
+        fleet:0,fuelAlloc:0,loadAlloc:0,smart:0,globe:0,
+        fleetRec:null,fuelAllocRec:null,loadAllocRec:null,smartRec:null,globeRec:null};
+      empOrder.push(key);
+    }
+    var e=empMap[key];
+    if(!e.emp_id&&r.emp_id)e.emp_id=r.emp_id;
+    var di=D.indexOf(r);
+    if(r.type==='Fuel'){
+      var ft=(r.fuel_type||'').toLowerCase();
+      if(ft==='fleet card'){e.fleet+=r.amount;e.fleetRec={di:di,r:r};}
+      else{e.fuelAlloc+=r.amount;e.fuelAllocRec={di:di,r:r};}
+    }else{
+      var lt=(r.load_type||'').toUpperCase();
+      if(lt==='SMART'){e.smart+=r.amount;e.smartRec={di:di,r:r};}
+      else if(lt==='GLOBE'){e.globe+=r.amount;e.globeRec={di:di,r:r};}
+      else{e.loadAlloc+=r.amount;e.loadAllocRec={di:di,r:r};}
+    }
+  }
+  empOrder.sort(function(a,b){var ea=empMap[a],eb=empMap[b];return ea.company.localeCompare(eb.company)||ea.name.localeCompare(eb.name);});
+  var tot=empOrder.length,pgs=Math.max(1,Math.ceil(tot/PG));if(mpg>=pgs)mpg=pgs-1;
+  var sl=empOrder.slice(mpg*PG,(mpg+1)*PG);
+  document.getElementById('mgr-ttl').textContent=(maF||'All affiliates')+' — '+tot.toLocaleString()+' employees';
   var h='';
-  for(var i=mpg*PG;i<Math.min(recs.length,(mpg+1)*PG);i++){
-    var r=recs[i];var di=D.indexOf(r);var sub=r.type==='Fuel'?(r.fuel_type||'Fleet card'):(r.load_type||'Load Allocation');var bc=r.type==='Fuel'?'badge-f':'badge-l';
-    var idDisp=r.emp_id?r.emp_id:'&mdash;';
-    var idSt=r.emp_id?"font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--ink2)":"color:var(--ink4)";
+  var dash='<span style="color:var(--ink4)">—</span>';
+  function fmtA(v){return v>0?'<span class="td-amt">'+P(v)+'</span>':dash;}
+  function actBtn(rec){
+    if(!rec)return '<div style="min-height:28px"></div>';
+    return '<div style="display:flex;gap:4px;justify-content:center"><button class="tbl-btn tbl-edit" onclick="openEdit('+rec.di+')">&#9998; Edit</button><button class="tbl-btn tbl-sep" onclick="openSep('+rec.di+')">&#10005; Sep</button></div>';
+  }
+  for(var i=0;i<sl.length;i++){
+    var e=empMap[sl[i]];
+    var rowTotal=e.fleet+e.fuelAlloc+e.loadAlloc+e.smart+e.globe;
+    var hasFuel=e.fleet>0||e.fuelAlloc>0;var hasLoad=e.loadAlloc>0||e.smart>0||e.globe>0;
+    var nameStyle=hasFuel&&hasLoad?'background:linear-gradient(90deg,var(--fuel-bg) 0%,var(--load-bg) 100%)':hasFuel?'background:var(--fuel-bg)':hasLoad?'background:var(--load-bg)':'';
+    var empId=e.emp_id||'';
+    var idSt=empId?'font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:600;color:var(--ink2)':'color:var(--ink4)';
+    // Actions column: stacked Edit/Sep per benefit that exists
+    var acts='<div style="display:flex;flex-direction:column;gap:4px;align-items:center">';
+    if(e.fleetRec)acts+='<div style="display:flex;gap:4px"><button class="tbl-btn tbl-edit" onclick="openEdit('+e.fleetRec.di+')">&#9998; Fleet</button><button class="tbl-btn tbl-sep" onclick="openSep('+e.fleetRec.di+')">&#10005;</button></div>';
+    if(e.fuelAllocRec)acts+='<div style="display:flex;gap:4px"><button class="tbl-btn tbl-edit" onclick="openEdit('+e.fuelAllocRec.di+')">&#9998; Fuel Alloc</button><button class="tbl-btn tbl-sep" onclick="openSep('+e.fuelAllocRec.di+')">&#10005;</button></div>';
+    if(e.loadAllocRec)acts+='<div style="display:flex;gap:4px"><button class="tbl-btn tbl-edit" onclick="openEdit('+e.loadAllocRec.di+')">&#9998; Load</button><button class="tbl-btn tbl-sep" onclick="openSep('+e.loadAllocRec.di+')">&#10005;</button></div>';
+    if(e.smartRec)acts+='<div style="display:flex;gap:4px"><button class="tbl-btn tbl-edit" onclick="openEdit('+e.smartRec.di+')">&#9998; Smart</button><button class="tbl-btn tbl-sep" onclick="openSep('+e.smartRec.di+')">&#10005;</button></div>';
+    if(e.globeRec)acts+='<div style="display:flex;gap:4px"><button class="tbl-btn tbl-edit" onclick="openEdit('+e.globeRec.di+')">&#9998; Globe</button><button class="tbl-btn tbl-sep" onclick="openSep('+e.globeRec.di+')">&#10005;</button></div>';
+    acts+='</div>';
     h+='<tr>';
-    h+='<td style="'+idSt+'">'+idDisp+'</td>';
-    h+='<td class="td-name">'+toTitle(r.name)+'</td>';
-    h+='<td>'+r.company+'</td>';
-    h+='<td class="td-dim">'+(r.dept||'&mdash;')+'</td>';
-    h+='<td class="td-dim">'+(r.designation||'&mdash;')+'</td>';
-    h+='<td><span class="badge '+bc+'">'+sub+'</span></td>';
-    h+='<td class="td-amt">'+P(r.amount)+'</td>';
-    h+='<td class="td-dim">'+(r.remarks||'&mdash;')+'</td>';
-    h+='<td style="text-align:center"><div style="display:flex;gap:5px;justify-content:center"><button class="tbl-btn tbl-edit" onclick="openEdit('+di+')">&#9998; Edit</button><button class="tbl-btn tbl-sep" onclick="openSep('+di+')">&#10005; Sep</button></div></td>';
+    h+='<td style="'+idSt+'">'+(empId||'&mdash;')+'</td>';
+    h+='<td class="td-name" style="'+nameStyle+'">'+toTitle(e.name)+'</td>';
+    h+='<td>'+e.company+'</td>';
+    h+='<td class="td-dim">'+(e.dept||'&mdash;')+'</td>';
+    h+='<td class="td-dim">'+(e.designation||'&mdash;')+'</td>';
+    h+='<td style="text-align:right;background:var(--fuel-bg)">'+fmtA(e.fleet)+'</td>';
+    h+='<td style="text-align:right;background:var(--fuel-bg)">'+fmtA(e.fuelAlloc)+'</td>';
+    h+='<td style="text-align:right;background:var(--load-bg)">'+fmtA(e.loadAlloc)+'</td>';
+    h+='<td style="text-align:right;background:var(--load-bg)">'+fmtA(e.smart)+'</td>';
+    h+='<td style="text-align:right;background:var(--load-bg)">'+fmtA(e.globe)+'</td>';
+    h+='<td style="text-align:right;font-weight:700;background:var(--gold-bg);color:var(--gold)">'+P(rowTotal)+'</td>';
+    h+='<td style="text-align:center;vertical-align:middle">'+acts+'</td>';
     h+='</tr>';
   }
-  document.getElementById('tb-mgr').innerHTML=h||'<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--ink3)">No records found</td></tr>';
-  renderPagi('pgi-mgr','pgb-mgr',tot,pgs,mpg,function(p){mpg=p;renderMgr();});
+  document.getElementById('tb-mgr').innerHTML=h||'<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--ink3)">No records found</td></tr>';
+  renderPagi('pgi-mgr','pgb-mgr',tot,pgs,mpg,function(p){mpg=p;renderMgr()}); 
 }
 
 function renderPagi(infoId,btnsId,total,pages,cur,cb){
@@ -1622,18 +1675,136 @@ function renderPagi(infoId,btnsId,total,pages,cur,cb){
 }
 
 function updSub(){var t=document.getElementById('m-type').value;var sel=document.getElementById('m-sub');var lbl=document.getElementById('m-sub-lbl');if(t==='Fuel'){sel.innerHTML='<option value="Fleet card">Fleet Card</option><option value="Fuel allocation">Fuel Allocation</option>';lbl.innerHTML='Fuel Sub-type <span class="req">*</span>';}else{sel.innerHTML='<option value="LOAD ALLOCATION">Load Allocation</option><option value="GLOBE">Globe</option><option value="SMART">Smart</option>';lbl.innerHTML='Load Sub-type <span class="req">*</span>';}}
-function openAdd(){editIdx=null;document.getElementById('mod-ttl').textContent='Add New Allocation';document.getElementById('mod-desc').textContent='Fill in all required fields.';document.getElementById('mod-save').textContent='Add Record';['m-empid','m-name','m-co','m-dept','m-desig','m-amt','m-rem'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('m-type').value='Fuel';updSub();document.getElementById('mod-err').style.display='none';var cos=[];for(var i=0;i<D.length;i++){if(cos.indexOf(D[i].company)<0)cos.push(D[i].company);}cos.sort();document.getElementById('m-co-list').innerHTML=cos.map(function(c){return '<option value="'+c+'">';}).join('');document.getElementById('mod-edit').classList.add('open');setTimeout(function(){document.getElementById('m-empid').focus();},100);}
-function openEdit(idx){editIdx=idx;var r=D[idx];document.getElementById('mod-ttl').textContent='Edit Allocation';document.getElementById('mod-desc').textContent='Updating: '+r.name;document.getElementById('mod-save').textContent='Save Changes';document.getElementById('m-empid').value=r.emp_id||'';document.getElementById('m-name').value=r.name;document.getElementById('m-co').value=r.company;document.getElementById('m-dept').value=r.dept||'';document.getElementById('m-desig').value=r.designation||'';document.getElementById('m-type').value=r.type;updSub();document.getElementById('m-sub').value=r.type==='Fuel'?(r.fuel_type||'Fleet card'):(r.load_type||'LOAD ALLOCATION');document.getElementById('m-amt').value=r.amount;document.getElementById('m-rem').value=r.remarks||'';document.getElementById('mod-err').style.display='none';var cos=[];for(var i=0;i<D.length;i++){if(cos.indexOf(D[i].company)<0)cos.push(D[i].company);}cos.sort();document.getElementById('m-co-list').innerHTML=cos.map(function(c){return '<option value="'+c+'">';}).join('');document.getElementById('mod-edit').classList.add('open');setTimeout(function(){document.getElementById('m-amt').focus();},100);}
-function saveRec(){var empid=document.getElementById('m-empid').value.trim();var nm=document.getElementById('m-name').value.trim().toUpperCase();var co=document.getElementById('m-co').value.trim().toUpperCase();var dept=document.getElementById('m-dept').value.trim();var desig=document.getElementById('m-desig').value.trim();var typ=document.getElementById('m-type').value;var sub=document.getElementById('m-sub').value;var amt=parseFloat(document.getElementById('m-amt').value);var rem=document.getElementById('m-rem').value.trim();var err=document.getElementById('mod-err');var errs=[];if(!nm)errs.push('Name required.');if(!co)errs.push('Affiliate required.');if(isNaN(amt)||amt<=0)errs.push('Valid amount required.');if(errs.length){err.textContent=errs.join(' ');err.style.display='block';return;}err.style.display='none';var t=nowT();if(editIdx===null){D.push({emp_id:empid,company:co,name:nm,dept:dept,designation:desig,amount:amt,fuel_type:typ==='Fuel'?sub:'',load_type:typ==='Load'?sub:'',remarks:rem,type:typ});addLog('add','Added <strong>'+nm+'</strong>'+(empid?' ['+empid+']':'')+' ('+co+') '+typ+' '+sub+' '+P(amt)+'.',t);toast('Added: '+nm);}else{var old=D[editIdx];D[editIdx]={emp_id:empid,company:co,name:nm,dept:dept,designation:desig,amount:amt,fuel_type:typ==='Fuel'?sub:'',load_type:typ==='Load'?sub:'',remarks:rem,type:typ};addLog('edit','Edited <strong>'+nm+'</strong>'+(empid?' ['+empid+']':'')+' amount '+P(old.amount)+' to '+P(amt)+'.',t);toast('Updated: '+nm);}closeMod('mod-edit');try{localStorage.setItem('fla_data',JSON.stringify(D));}catch(ex){}renderAll();}
+function lookupEmpId(){
+  var id=document.getElementById('m-empid').value.trim().toUpperCase();
+  var st=document.getElementById('m-lookup-status');
+  var fields=['m-name','m-co','m-dept','m-desig'];
+  if(!id){
+    fields.forEach(function(f){document.getElementById(f).value='';});
+    st.textContent='';st.style.color='';return;
+  }
+  var match=UNIFIED_MASTER.map[id]||UNIFIED_MASTER.map[id.replace(/^0+/,'')]||null;
+  if(!match){
+    // try stripping prefix zeros
+    var n2=id.replace(/^(CE|CS|SI|PI|PT|PS|PR|RS|RO|AM|MC|AB|PH|PP|SM)0*/,function(m,p){return p;});
+    match=UNIFIED_MASTER.map[n2]||null;
+  }
+  if(match){
+    document.getElementById('m-name').value=match.name.toUpperCase();
+    document.getElementById('m-co').value=match.affiliate.toUpperCase();
+    document.getElementById('m-dept').value=(match.dept||'').toUpperCase();
+    document.getElementById('m-desig').value=(match.position||'');
+    st.textContent='✓ Found: '+match.name+' ('+match.affiliate+')';
+    st.style.color='var(--load)';
+    setTimeout(function(){document.getElementById('m-type').focus();},50);
+  } else {
+    fields.forEach(function(f){document.getElementById(f).value='';});
+    st.textContent='⚠ ID not found in PGB masterlist. Check ID and try again.';
+    st.style.color='var(--accent)';
+  }
+}
+function openAdd(){
+  editIdx=null;
+  document.getElementById('mod-ttl').textContent='Add New Allocation';
+  document.getElementById('mod-desc').textContent='Enter Employee ID No. — details will auto-fill from PGB masterlist.';
+  document.getElementById('mod-save').textContent='Add Record';
+  ['m-empid','m-name','m-co','m-dept','m-desig','m-amt','m-rem'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('m-lookup-status').textContent='';
+  document.getElementById('m-type').value='Fuel';updSub();
+  document.getElementById('mod-err').style.display='none';
+  document.getElementById('mod-edit').classList.add('open');
+  setTimeout(function(){document.getElementById('m-empid').focus();},100);
+}
+function openEdit(idx){
+  editIdx=idx;var r=D[idx];
+  document.getElementById('mod-ttl').textContent='Edit Allocation';
+  document.getElementById('mod-desc').textContent='Updating: '+toTitle(r.name);
+  document.getElementById('mod-save').textContent='Save Changes';
+  document.getElementById('m-empid').value=r.emp_id||'';
+  document.getElementById('m-name').value=r.name;
+  document.getElementById('m-co').value=r.company;
+  document.getElementById('m-dept').value=r.dept||'';
+  document.getElementById('m-desig').value=r.designation||'';
+  var st=document.getElementById('m-lookup-status');
+  st.textContent=r.emp_id?'✓ '+toTitle(r.name)+' ('+r.company+')':'';
+  st.style.color='var(--load)';
+  document.getElementById('m-type').value=r.type;updSub();
+  document.getElementById('m-sub').value=r.type==='Fuel'?(r.fuel_type||'Fleet card'):(r.load_type||'LOAD ALLOCATION');
+  document.getElementById('m-amt').value=r.amount;
+  document.getElementById('m-rem').value=r.remarks||'';
+  document.getElementById('mod-err').style.display='none';
+  document.getElementById('mod-edit').classList.add('open');
+  setTimeout(function(){document.getElementById('m-amt').focus();},100);
+}
+function saveRec(){
+  var empid=document.getElementById('m-empid').value.trim();
+  var nm=document.getElementById('m-name').value.trim().toUpperCase();
+  var co=document.getElementById('m-co').value.trim().toUpperCase();
+  var dept=document.getElementById('m-dept').value.trim();
+  var desig=document.getElementById('m-desig').value.trim();
+  var typ=document.getElementById('m-type').value;
+  var sub=document.getElementById('m-sub').value;
+  var amt=parseFloat(document.getElementById('m-amt').value);
+  var rem=document.getElementById('m-rem').value.trim();
+  var err=document.getElementById('mod-err');var errs=[];
+  if(!empid)errs.push('Employee ID required.');
+  if(!nm)errs.push('Employee not found — check ID No.');
+  if(!co)errs.push('Affiliate could not be determined.');
+  if(isNaN(amt)||amt<=0)errs.push('Valid amount required.');
+  if(errs.length){err.textContent=errs.join(' ');err.style.display='block';return;}
+  err.style.display='none';var t=nowT();
+  if(editIdx===null){
+    D.push({emp_id:empid,company:co,name:nm,dept:dept,designation:desig,amount:amt,fuel_type:typ==='Fuel'?sub:'',load_type:typ==='Load'?sub:'',remarks:rem,type:typ});
+    addLog('add','Added <strong>'+nm+'</strong> ['+empid+'] ('+co+') '+typ+' '+sub+' '+P(amt)+'.',t);
+    toast('Added: '+toTitle(nm));
+  }else{
+    var old=D[editIdx];
+    D[editIdx]={emp_id:empid,company:co,name:nm,dept:dept,designation:desig,amount:amt,fuel_type:typ==='Fuel'?sub:'',load_type:typ==='Load'?sub:'',remarks:rem,type:typ};
+    addLog('edit','Edited <strong>'+nm+'</strong> ['+empid+'] amount '+P(old.amount)+' → '+P(amt)+'.',t);
+    toast('Updated: '+toTitle(nm));
+  }
+  closeMod('mod-edit');
+  try{localStorage.setItem('fla_data',JSON.stringify(D));}catch(ex){}
+  renderAll();
+}
 function openSep(idx){sepIdx=idx;var r=D[idx];document.getElementById('sep-desc').innerHTML='Remove <strong>'+r.name+'</strong> ('+r.company+' — '+r.type+' '+P(r.amount)+')? Logged.';document.getElementById('mod-sep').classList.add('open');}
 function confirmSep(){if(sepIdx===null)return;var r=D[sepIdx];var snapshot=JSON.parse(JSON.stringify(r));addLog('sep','Separated <strong>'+toTitle(r.name)+'</strong>'+(r.emp_id?' ['+r.emp_id+']':'')+' ('+r.company+') '+r.type+' '+P(r.amount)+' removed.',nowT(),snapshot);D.splice(sepIdx,1);try{localStorage.setItem('fla_data',JSON.stringify(D));}catch(ex){}sepIdx=null;toast('Separated.');closeMod('mod-sep');renderAll();}
 function closeMod(id){document.getElementById(id).classList.remove('open');}
 document.getElementById('mod-edit').addEventListener('click',function(e){if(e.target===e.currentTarget)closeMod('mod-edit');});
 document.getElementById('mod-sep').addEventListener('click',function(e){if(e.target===e.currentTarget)closeMod('mod-sep');});
-function addLog(type,txt,t,snapshot){logs.unshift({type:type,txt:txt,t:t,snapshot:snapshot||null});try{localStorage.setItem('fla_changelog',JSON.stringify(logs));}catch(e){}renderLog();}
-function clearLog(){if(!confirm('Clear all change log entries? This cannot be undone.'))return;logs=[];try{localStorage.removeItem('fla_changelog');}catch(e){}renderLog();toast('Change log cleared.');}
+function addLog(type,txt,t,snapshot){lpg=0;logs.unshift({type:type,txt:txt,t:t,snapshot:snapshot||null});try{localStorage.setItem('fla_changelog',JSON.stringify(logs));}catch(e){}renderLog();}
+function clearLog(){if(!confirm('Clear all change log entries? This cannot be undone.'))return;logs=[];lpg=0;try{localStorage.removeItem('fla_changelog');}catch(e){}renderLog();toast('Change log cleared.');}
 function recoverSep(idx){var l=logs[idx];if(!l||!l.snapshot)return;if(!confirm('Recover this allocation for '+toTitle(l.snapshot.name)+'?'))return;D.push(l.snapshot);try{localStorage.setItem('fla_data',JSON.stringify(D));}catch(ex){}addLog('edit','Recovered <strong>'+toTitle(l.snapshot.name)+'</strong>'+(l.snapshot.emp_id?' ['+l.snapshot.emp_id+']':'')+' ('+l.snapshot.company+') '+l.snapshot.type+' '+P(l.snapshot.amount)+'.',nowT());toast('Recovered: '+toTitle(l.snapshot.name));renderAll();}
-function renderLog(){document.getElementById('log-ct').textContent=logs.length+' change'+(logs.length!==1?'s':'');if(!logs.length){document.getElementById('log-list').innerHTML='<div style="color:var(--ink3);font-size:12px;padding:8px 0">No changes yet.</div>';return;}var h='';for(var i=0;i<logs.length;i++){var l=logs[i];var recoverBtn=l.type==='sep'&&l.snapshot?'<button onclick="recoverSep('+i+')" style="margin-left:8px;font-size:10px;padding:2px 8px;border-radius:6px;border:1px solid var(--load2);color:var(--load2);background:var(--load-bg);cursor:pointer;font-weight:600;flex-shrink:0">&#8635; Recover</button>':'';h+='<div class="log-entry log-'+l.type+'" style="align-items:center"><span class="log-time">'+l.t+'</span><span class="log-txt" style="flex:1">'+l.txt+'</span>'+recoverBtn+'<span class="log-badge lb-'+l.type+'">'+(l.type==='add'?'Added':l.type==='edit'?'Edited':'Separated')+'</span></div>';}document.getElementById('log-list').innerHTML=h;}
+function renderLog(){
+  var total=logs.length;
+  var pages=Math.max(1,Math.ceil(total/LPG));
+  if(lpg>=pages)lpg=pages-1;
+  document.getElementById('log-ct').textContent=total+' change'+(total!==1?'s':'');
+  if(!total){
+    document.getElementById('log-list').innerHTML='<div style="color:var(--ink3);font-size:12px;padding:8px 0">No changes yet.</div>';
+    document.getElementById('log-pagi').innerHTML='';
+    return;
+  }
+  var start=lpg*LPG,end=Math.min(start+LPG,total);
+  var h='';
+  for(var i=start;i<end;i++){
+    var l=logs[i];
+    var recoverBtn=l.type==='sep'&&l.snapshot?'<button onclick="recoverSep('+i+')" style="margin-left:8px;font-size:10px;padding:2px 8px;border-radius:6px;border:1px solid var(--load2);color:var(--load2);background:var(--load-bg);cursor:pointer;font-weight:600;flex-shrink:0">&#8635; Recover</button>':'';
+    h+='<div class="log-entry log-'+l.type+'" style="align-items:center"><span class="log-time">'+l.t+'</span><span class="log-txt" style="flex:1">'+l.txt+'</span>'+recoverBtn+'<span class="log-badge lb-'+l.type+'">'+(l.type==='add'?'Added':l.type==='edit'?'Edited':'Separated')+'</span></div>';
+  }
+  document.getElementById('log-list').innerHTML=h;
+  var info='<span style="font-size:11px;color:var(--ink4)">'+(start+1)+'–'+end+' of '+total+'</span>';
+  var btns='<div style="display:flex;gap:4px">';
+  btns+='<button class="pg-btn"'+(lpg===0?' disabled':'')+' onclick="lpg--;renderLog()">&#8592; Prev</button>';
+  for(var p=0;p<pages;p++){
+    if(pages<=7||Math.abs(p-lpg)<=1||p===0||p===pages-1)
+      btns+='<button class="pg-btn'+(p===lpg?' cur':'')+'" onclick="lpg='+p+';renderLog()">'+(p+1)+'</button>';
+    else if(Math.abs(p-lpg)===2)
+      btns+='<span style="padding:0 3px;color:var(--ink4)">&hellip;</span>';
+  }
+  btns+='<button class="pg-btn"'+(lpg>=pages-1?' disabled':'')+' onclick="lpg++;renderLog()">Next &#8594;</button></div>';
+  document.getElementById('log-pagi').innerHTML=info+btns;
+}
 function dlCSV(data,fn){var hdrs=['ID No.','Company','Name','Dept','Designation','Type','Fuel Type','Load Type','Amount','Remarks'];var rows=[hdrs];for(var i=0;i<data.length;i++){var r=data[i];rows.push([r.emp_id||'',r.company,r.name,r.dept,r.designation,r.type,r.fuel_type||'',r.load_type||'',r.amount,r.remarks||'']);}var csv=rows.map(function(r){return r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(',');}).join('\n');var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=fn;a.click();}
 function expAllCSV(){dlCSV(D,'primary_allocation.csv');toast('CSV downloaded');}
 function expFilteredCSV(){dlCSV(filtD(),'primary_allocation_filtered.csv');toast('Filtered CSV downloaded');}
